@@ -1,24 +1,15 @@
-#[allow(dead_code)]
-use mini_redis::{client, Result};
-use std::env;
-
-fn get_env(name: &str) -> String {
-    env::var(name).expect(name)
-}
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpListener,
+};
 
 #[tokio::main]
-async fn main() -> Result<()> {
-    let redis_server = get_env("REDIS_SERVER");
-    // Open a connection to the mini-redis address.
-    let mut client = client::connect(redis_server).await?;
-
-    // Set the key "hello" with value "world"
-    client.set("hello", "world".into()).await?;
-
-    // Get key "hello"
-    let result = client.get("hello").await?;
-
-    println!("got value from the server; result={:?}", result);
-
-    Ok(())
+async fn main() {
+    let listner = TcpListener::bind("localhost:8000").await.unwrap();
+    let (mut socket, _addr) = listner.accept().await.unwrap();
+    loop {
+        let mut buffer = [0u8; 1024];
+        let bytes_read = socket.read(&mut buffer).await.unwrap();
+        socket.write_all(&buffer[..bytes_read]).await.unwrap();
+    }
 }
